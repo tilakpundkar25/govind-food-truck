@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Govind Food Truck Management</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Firebase SDK from CDN -->
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+    <style>
+        :root {
+            --primary: #60a5fa;
+            --secondary: #1e40af;
+            --bg: #edf2f7;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top left, rgba(96,165,250,0.25), transparent 28%),
+                        linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .login-screen, .app-screen { width: 100%; display: none; }
+        .login-screen.active, .app-screen.active { display: block; }
+        .auth-layout {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            display: grid;
+            gap: 24px;
+        }
+        .tabs {
+            display: flex;
+            gap: 12px;
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 2;
+        }
+        .tab-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(30,64,175,0.12);
+            color: var(--secondary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        .tab-button.hidden-tab {
+            display: none;
+        }
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+        }
+        .auth-card {
+            background: rgba(255,255,255,0.96);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            padding: 32px;
+            position: relative;
+        }
+        .auth-card h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--secondary);
+        }
+        .auth-section {
+            display: none;
+        }
+        .auth-section.active {
+            display: block;
+        }
+        .auth-field {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .auth-field label {
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+        .auth-field input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            font-size: 1rem;
+        }
+        button.primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            width: 100%;
+        }
+        button.secondary {
+            background: transparent;
+            border: 1px solid #cbd5e1;
+            color: var(--secondary);
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+        }
+        button.danger {
+            background: #dc2626;
+            border: none;
+            color: #fff;
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .message {
+            margin-top: 12px;
+            min-height: 20px;
+            color: #dc2626;
+        }
+        .app-shell {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, rgba(96,165,250,0.97), rgba(30,64,175,0.97));
+            padding: 28px 22px;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .sidebar .logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 6px;
+        }
+        .sidebar .logo {
+            font-size: 0.95rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            margin-bottom: 14px;
+        }
+        .sidebar .user-welcome {
+            margin-bottom: 26px;
+            line-height: 1.6;
+        }
+        .nav-items {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .nav-item {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        .nav-item.active, .nav-item:hover {
+            background: rgba(255,255,255,0.22);
+        }
+        .sidebar .bottom-action {
+            margin-top: 32px;
+            display: grid;
+            gap: 12px;
+        }
+        .main-panel {
+            background: #f8fafc;
+            padding: 28px 34px;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .panel-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: var(--secondary);
+        }
+        .panel-subtitle {
+            color: var(--muted);
+            margin-top: 8px;
+        }
+        .panel-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .form-grid {
+            display: grid;
+            gap: 16px;
+        }
+        .form-grid label {
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+        .form-grid input, .form-grid select, .form-grid textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            padding: 12px 14px;
+            font-size: 1rem;
+            background: #f8fafc;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .table th, .table td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .table th {
+            font-weight: 700;
+            color: var(--secondary);
+        }
+        .table tbody tr:hover {
+            background: #eef2ff;
+        }
+        .tag {
+            display: inline-flex;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            background: rgba(96,165,250,0.18);
+            color: var(--secondary);
+        }
+        .light-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+        }
+        .small-note {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .full-width { width: 100%; }
+        .top-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .hidden { display: none; }
+        .center-text { text-align: center; }
+        .button-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .button-row button { flex: 1; }
+        .button-row button.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            border-color: transparent;
+        }
+        .error-text { color: #b91c1c; margin-top: 8px; }
+        @media (max-width: 900px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .sidebar { flex-direction: row; overflow-x: auto; min-height: auto; padding: 18px; }
+            .nav-items { flex-direction: row; overflow-x: auto; }
+            .nav-item { white-space: nowrap; }
+            .sidebar .bottom-action { margin-top: 0; }
+            .main-panel { padding: 20px 16px; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-screen active" id="loginScreen">
+        <div class="auth-layout">
+            <div class="auth-card" id="loginCard">
+                <h2>Welcome back to Govind Food Truck</h2>
+                <div class="button-row" style="margin-bottom: 20px; gap: 12px;">
+                    <button class="secondary full-width active" id="emailLoginMode">Email</button>
+                    <button class="secondary full-width" id="phoneLoginMode">Phone</button>
+                </div>
+                <div id="emailLoginFields">
+                    <div class="auth-field">
+                        <label for="loginName">Email</label>
+                        <input id="loginName" type="email" placeholder="Enter your email" />
+                    </div>
+                    <div class="auth-field">
+                        <label for="loginPasskey">Password</label>
+                        <input id="loginPasskey" type="password" placeholder="Enter your password" />
+                    </div>
+                    <button class="primary" id="loginButton">Log In</button>
+                </div>
+                <div id="phoneLoginFields" class="hidden">
+                    <div class="auth-field">
+                        <label for="loginPhone">Phone number</label>
+                        <input id="loginPhone" type="tel" placeholder="+911234567890" />
+                    </div>
+                    <button class="primary" id="sendPhoneOtpButton">Send OTP</button>
+                    <div id="otpSection" class="auth-field hidden">
+                        <label for="loginOtp">Enter OTP</label>
+                        <input id="loginOtp" type="text" maxlength="6" placeholder="123456" />
+                        <button class="primary" id="verifyPhoneOtpButton">Verify OTP</button>
+                    </div>
+                </div>
+                <div id="recaptcha-container"></div>
+                <div class="message" id="loginMessage"></div>
+            </div>
+        </div>
+    </div>
+    <div class="app-screen" id="appScreen">
+        <div class="app-shell">
+            <aside class="sidebar">
+                <div>
+                    <div class="logo-container">
+                        <img src="./photos/logo.png" alt="Govind Food Truck Logo" class="logo-img" />
+                        <div class="logo">Govind Food Truck</div>
+                    </div>
+                    <div class="user-welcome" id="userWelcome">Good to see you.</div>
+                    <div class="nav-items" id="navItems">
+                        <div class="nav-item active" data-section="inventorySection">Inventory</div>
+                        <div class="nav-item" data-section="stockSection">Stock Request</div>
+                        <div class="nav-item" data-section="billingSection">Billing</div>
+                        <div class="nav-item" data-section="supportSection">Support</div>
+                        <div class="nav-item hidden" id="userManagementNav" data-section="userManagementSection">User Management</div>
+                    </div>
+                </div>
+                <div class="bottom-action">
+                    <button class="primary full-width" id="upgradeButton">Upgrade Role</button>
+                    <button class="secondary full-width" id="logoutButton">Log Out</button>
+                </div>
+            </aside>
+            <main class="main-panel">
+                <div class="panel-header">
+                    <div>
+                        <h1 id="panelTitle">Inventory</h1>
+                        <div class="panel-subtitle" id="panelSubtitle">Manage current stock and replenish items.</div>
+                    </div>
+                    <div class="tag" id="roleBadge">User</div>
+                </div>
+                <section id="inventorySection" class="panel-card section-card">
+                    <div class="top-info">
+                        <div>
+                            <h2>Inventory</h2>
+                            <p class="small-note">Add and track the stock you currently have in the truck.</p>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="light-card">
+                            <h3>Add Stock</h3>
+                            <div class="form-grid">
+                                <label for="stockName">Item name</label>
+                                <input id="stockName" type="text" placeholder="e.g. Samosa" />
+                                <label for="stockQuantity">Quantity</label>
+                                <input id="stockQuantity" type="number" min="1" placeholder="Enter quantity" />
+                                <button class="primary" id="addStockButton">Add stock</button>
+                                <div class="error-text" id="stockMessage"></div>
+                            </div>
+                        </div>
+                        <div class="light-card">
+                            <h3>Current inventory</h3>
+                            <table class="table" id="inventoryTable">
+                                <thead>
+                                    <tr><th>S.NO</th><th>Item</th><th>Quantity</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <p class="small-note">Inventory is saved locally and available on return.</p>
+                        </div>
+                    </div>
+                </section>
+                <section id="stockSection" class="panel-card section-card hidden">
+                    <div class="top-info">
+                        <div>
+                            <h2>Stock Requests</h2>
+                            <p class="small-note">Request missing items and let the admin see requests.</p>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="light-card">
+                            <h3>Request new stock</h3>
+                            <div class="form-grid">
+                                <label for="requestItem">Item name</label>
+                                <input id="requestItem" type="text" placeholder="Item to request" />
+                                <label for="requestQty">Quantity</label>
+                                <input id="requestQty" type="number" min="1" placeholder="Requested quantity" />
+                                <button class="primary" id="submitRequestButton">Send request</button>
+                                <div class="error-text" id="requestMessage"></div>
+                            </div>
+                        </div>
+                        <div class="light-card">
+                            <h3>Requests</h3>
+                            <table class="table" id="requestTable">
+                                <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>User</th><th>Status</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <section id="billingSection" class="panel-card section-card hidden">
+                    <div class="top-info">
+                        <div>
+                            <h2>Billing</h2>
+                            <p class="small-note">Create bills, print invoices, and let admin manage menu prices.</p>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="light-card">
+                            <h3>Menu items</h3>
+                            <table class="table" id="menuTable">
+                                <thead><tr><th>#</th><th>Item</th><th>Price</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                            <div class="small-note">Menu prices are added and edited by the admin.</div>
+                        </div>
+                        <div class="light-card">
+                            <h3>Build bill</h3>
+                            <div class="form-grid">
+                                <label for="customerName">Customer name</label>
+                                <input id="customerName" type="text" placeholder="Enter customer name" />
+                                <label for="customerMobile">Customer mobile</label>
+                                <input id="customerMobile" type="tel" inputmode="tel" placeholder="+911234567890" />
+                                <p class="small-note">If mobile is entered, an e-bill will be opened for WhatsApp delivery.</p>
+                                <label for="selectItem">Choose item</label>
+                                <select id="selectItem"></select>
+                                <label for="itemQty">Quantity</label>
+                                <input id="itemQty" type="number" min="1" value="1" />
+                                <label for="paymentMode">Payment mode</label>
+                                <select id="paymentMode">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Card">Card</option>
+                                    <option value="UPI">UPI</option>
+                                </select>
+                                <button class="primary" id="addToCartButton">Add to bill</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="light-card">
+                        <h3>Current bill</h3>
+                        <table class="table" id="cartTable">
+                            <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="top-info" style="margin-top:18px; gap: 10px;">
+                            <strong>Total Amount: </strong>
+                            <span id="billTotal">₹0</span>
+                        </div>
+                        <div class="button-row" style="margin-top:18px;">
+                            <button class="primary" id="printBillButton">Print bill</button>
+                            <button class="secondary" id="clearBillButton">Clear bill</button>
+                        </div>
+                        <div class="error-text" id="billMessage"></div>
+                    </div>
+                    <div class="light-card hidden" id="adminMenuEditor">
+                        <h3>Admin: Manage menu</h3>
+                        <div class="grid-2">
+                            <div class="form-grid">
+                                <label for="menuItemName">Item name</label>
+                                <input id="menuItemName" type="text" placeholder="Example: Fried Rice" />
+                                <label for="menuItemPrice">Price</label>
+                                <input id="menuItemPrice" type="number" min="1" placeholder="Price in ₹" />
+                            </div>
+                            <div class="form-grid">
+                                <button class="primary" id="addMenuItemButton">Add item</button>
+                                <button class="secondary" id="editMenuItemButton">Edit items</button>
+                                <button class="secondary" id="saveMenuEditButton">Update selected item</button>
+                                <button class="danger" id="deleteMenuItemButton">Delete selected item</button>
+                            </div>
+                        </div>
+                        <div class="small-note">Select an item in the billing dropdown, click Edit items, then update name/price or delete it.</div>
+                    </div>
+                    <div class="light-card">
+                        <h3>Bill history</h3>
+                        <table class="table" id="billHistoryTable">
+                            <thead><tr><th>Bill No</th><th>Customer</th><th>Mobile</th><th>User</th><th>Items</th><th>Total</th><th>Date</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </section>
+                <section id="supportSection" class="panel-card section-card hidden">
+                    <div class="top-info">
+                        <div>
+                            <h2>Support</h2>
+                            <p class="small-note">Send your issues directly to the admin team.</p>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="light-card">
+                            <h3>Submit a problem</h3>
+                            <div class="form-grid">
+                                <label for="supportMessageInput">Describe your issue</label>
+                                <textarea id="supportMessageInput" rows="5" placeholder="Write the problem you are facing."></textarea>
+                                <button class="primary" id="sendSupportButton">Send issue</button>
+                                <div class="error-text" id="supportMessage"></div>
+                            </div>
+                        </div>
+                        <div class="light-card">
+                            <h3>Issue history</h3>
+                            <table class="table" id="supportTable">
+                                <thead><tr><th>#</th><th>User</th><th>Issue</th><th>Date</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <section id="userManagementSection" class="panel-card section-card hidden">
+                    <div class="top-info">
+                        <div>
+                            <h2>User Management</h2>
+                            <p class="small-note">Manage all users, their roles, and phone numbers.</p>
+                        </div>
+                    </div>
+                    <div class="light-card">
+                        <h3>All Users</h3>
+                        <table class="table" id="userTable">
+                            <thead><tr><th>#</th><th>Email</th><th>Role</th><th>Phone</th><th>Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="grid-2">
+                        <div class="light-card">
+                            <h3>Change Role</h3>
+                            <div class="form-grid">
+                                <label for="selectUserRole">Select User</label>
+                                <select id="selectUserRole"></select>
+                                <label for="newRole">New Role</label>
+                                <select id="newRole">
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="developer">Developer</option>
+                                </select>
+                                <button class="primary" id="changeRoleButton">Change Role</button>
+                                <div class="error-text" id="roleMessage"></div>
+                            </div>
+                        </div>
+                        <div class="light-card">
+                            <h3>Add Phone Number</h3>
+                            <div class="form-grid">
+                                <label for="selectUserPhone">Select User</label>
+                                <select id="selectUserPhone"></select>
+                                <label for="userPhone">Phone Number</label>
+                                <input id="userPhone" type="tel" placeholder="+911234567890" />
+                                <button class="primary" id="addPhoneButton">Add Phone</button>
+                                <div class="error-text" id="phoneMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="light-card">
+                        <h3>Remove User</h3>
+                        <div class="form-grid">
+                            <label for="selectUserRemove">Select User</label>
+                            <select id="selectUserRemove"></select>
+                            <button class="danger" id="removeUserButton">Remove User</button>
+                            <div class="error-text" id="removeMessage"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+        // Wait for Firebase to load from CDN
+        let firebaseInitialized = false;
+
+        function waitForFirebase() {
+            if (typeof firebase === 'undefined') {
+                setTimeout(waitForFirebase, 100);
+                return;
+            }
+
+            // Firebase Configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyCNvh-RgqczWVtQDvFffOo6ogxgfoRNqxo",
+                authDomain: "gft1-e6663.firebaseapp.com",
+                projectId: "gft1-e6663",
+                storageBucket: "gft1-e6663.firebasestorage.app",
+                messagingSenderId: "264993124608",
+                appId: "1:264993124608:web:6a17ec51831d4ce34583e5",
+                measurementId: "G-3TTCE3SZPQ",
+                databaseURL: "https://gft1-e6663-default-rtdb.asia-southeast1.firebasedatabase.app"
+            };
+
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("Firebase initialized successfully!");
+                firebaseInitialized = true;
+                database = firebase.database();
+                auth = firebase.auth();
+
+                // Setup auth state listener
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        console.log("User logged in:", user.email || user.phoneNumber);
+                        db = await loadUserData(user.uid);
+                        setUser(user);
+                    } else {
+                        console.log("User logged out");
+                        setUser(null);
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase error:", error);
+            }
+        }
+
+        let db = null;
+        let database;
+        let auth = null;
+        let currentUser = null;
+        let currentSection = 'inventorySection';
+        let currentCart = [];
+        let editingMenuItem = null;
+        let phoneConfirmationResult = null;
+
+        function setUser(user) {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('appScreen').classList.add('active');
+                document.getElementById('userWelcome').textContent = `Hello, ${user.displayName || user.email}. Ready to go!`;
+                updateRoleUI();
+                const billingNote = document.querySelector('#billingSection .small-note');
+                if (billingNote) {
+                    billingNote.textContent = 'Select items and print your bill from the available menu.';
+                }
+                renderAll();
+                showSection(currentSection);
+                // Set up real-time listener for data changes
+                database.ref(`users/${user.uid}`).on('value', async (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        db = {
+                            ...getDefaultDB(),
+                            ...data
+                        };
+                        updateRoleUI();
+                    }
+                });
+            } else {
+                currentUser = null;
+                document.getElementById('loginScreen').classList.add('active');
+                document.getElementById('appScreen').classList.remove('active');
+                // Unsubscribe from real-time listener
+                if (currentUser) {
+                    database.ref(`users/${currentUser.uid}`).off();
+                }
+            }
+        }
+
+        function updateRoleUI() {
+            const roleDisplay = db.role === 'admin' ? 'Admin' : db.role === 'developer' ? 'Developer' : 'User';
+            document.getElementById('roleBadge').textContent = roleDisplay;
+            if (db.role === 'admin' || db.role === 'developer') {
+                document.getElementById('adminMenuEditor').classList.remove('hidden');
+                if (db.role === 'developer') {
+                    document.getElementById('userManagementNav').classList.remove('hidden');
+                } else {
+                    document.getElementById('userManagementNav').classList.add('hidden');
+                }
+            } else {
+                document.getElementById('adminMenuEditor').classList.add('hidden');
+                document.getElementById('userManagementNav').classList.add('hidden');
+            }
+        }
+
+        waitForFirebase();
+    </script>
+    <script>
+        let logoDataUrl = null;
+        
+        // Load logo once on page start
+        function loadLogoForPdf() {
+            if (logoDataUrl) return;
+            const logoImg = document.querySelector('.logo-img');
+            if (logoImg && logoImg.complete) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = logoImg.naturalWidth;
+                    canvas.height = logoImg.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(logoImg, 0, 0);
+                    logoDataUrl = canvas.toDataURL('image/png');
+                } catch (e) {
+                    console.log('Could not convert logo to data URL');
+                }
+            }
+        }
+        
+        // Load logo from file
+        async function loadLogoAsync() {
+            if (logoDataUrl) return logoDataUrl;
+            try {
+                const response = await fetch('./photos/logo.png');
+                if (!response.ok) throw new Error('Failed to fetch logo');
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        logoDataUrl = e.target.result;
+                        resolve(logoDataUrl);
+                    };
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.log('Could not load logo from file:', e);
+                return null;
+            }
+        }
+        
+        // Load default database structure
+        function getDefaultDB() {
+            return {
+                items: [
+                    { id: 'burger', name: 'Veg Burger', price: 80 },
+                    { id: 'paneer-sandwich', name: 'Paneer Sandwich', price: 120 },
+                    { id: 'cooldrink', name: 'Cool Drink', price: 40 },
+                    { id: 'chowmein', name: 'Veg Chowmein', price: 90 }
+                ],
+                inventory: [],
+                stockRequests: [],
+                bills: [],
+                supportMessages: [],
+                role: 'user'
+            };
+        }
+
+        // Load user data from Realtime Database
+        async function loadUserData(uidOrPhone) {
+            try {
+                let uid = uidOrPhone;
+                
+                // If it's a phone number (starts with + or is all digits), try to find the uid
+                if (typeof uidOrPhone === 'string' && (uidOrPhone.startsWith('+') || /^\d+$/.test(uidOrPhone))) {
+                    const snapshot = await database.ref('users').once('value');
+                    const data = snapshot.val();
+                    if (data) {
+                        for (const key in data) {
+                            if (data[key].phone === uidOrPhone) {
+                                uid = key;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                const snapshot = await database.ref(`users/${uid}`).once('value');
+                const data = snapshot.val();
+                if (data) {
+                    return {
+                        ...getDefaultDB(),
+                        ...data,
+                        role: data.role || 'user',
+                        inventory: data.inventory || [],
+                        stockRequests: data.stockRequests || [],
+                        bills: data.bills || [],
+                        supportMessages: data.supportMessages || [],
+                        phone: data.phone || ""
+                    };
+                } else {
+                    return getDefaultDB();
+                }
+            } catch (error) {
+                console.error("Error loading user data:", error);
+                return getDefaultDB();
+            }
+        }
+
+        // Save database to Firebase Realtime Database
+        async function saveDB() {
+            if (!currentUser) return;
+            try {
+                await database.ref(`users/${currentUser.uid}`).update({
+                    items: db.items,
+                    inventory: db.inventory,
+                    stockRequests: db.stockRequests,
+                    bills: db.bills,
+                    supportMessages: db.supportMessages,
+                    role: db.role || 'user',
+                    email: currentUser.email,
+                    name: currentUser.displayName || "User",
+                    phone: db.phone || ""
+                });
+                console.log("Data saved to Firebase");
+            } catch (error) {
+                console.error("Error saving data:", error);
+            }
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section-card').forEach(section => {
+                section.classList.toggle('hidden', section.id !== sectionId);
+            });
+            document.querySelectorAll('.nav-item').forEach(button => {
+                button.classList.toggle('active', button.dataset.section === sectionId);
+            });
+            const panelTitle = document.getElementById('panelTitle');
+            const panelSubtitle = document.getElementById('panelSubtitle');
+            const titles = {
+                inventorySection: ['Inventory', 'Manage current stock and replenish items.'],
+                stockSection: ['Stock Request', 'Submit or review pending stock requests.'],
+                billingSection: ['Billing', 'Create bills and print invoices for customers.'],
+                supportSection: ['Support', 'Send issues to the admin team.'],
+                userManagementSection: ['User Management', 'Manage users, roles, and phone numbers.']
+            };
+            const title = titles[sectionId] || titles.inventorySection;
+            panelTitle.textContent = title[0];
+            panelSubtitle.textContent = title[1];
+            currentSection = sectionId;
+        }
+
+        function capitalize(value) {
+            return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+        }
+
+        function renderInventory() {
+            const body = document.querySelector('#inventoryTable tbody');
+            body.innerHTML = '';
+            db.inventory.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${item.name}</td><td>${item.quantity}</td>`;
+                body.appendChild(row);
+            });
+            if (db.inventory.length === 0) {
+                body.innerHTML = '<tr><td colspan="3" class="center-text">No stock saved yet.</td></tr>';
+            }
+        }
+
+        function renderRequests() {
+            const body = document.querySelector('#requestTable tbody');
+            body.innerHTML = '';
+            const userName = currentUser.displayName || currentUser.email;
+            const requests = db.stockRequests.filter(r => r.user === userName);
+            requests.forEach((request, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${request.item}</td><td>${request.quantity}</td><td>${request.user}</td><td>${request.status}</td>`;
+                body.appendChild(row);
+            });
+            if (requests.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="center-text">No requests yet.</td></tr>';
+            }
+        }
+
+        function renderMenu() {
+            const tbody = document.querySelector('#menuTable tbody');
+            tbody.innerHTML = '';
+            const select = document.getElementById('selectItem');
+            select.innerHTML = '';
+            db.items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${item.name}</td><td>₹${item.price}</td>`;
+                tbody.appendChild(row);
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} — ₹${item.price}`;
+                select.appendChild(option);
+            });
+            if (db.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="center-text">No menu items available.</td></tr>';
+                select.innerHTML = '<option value="">No items</option>';
+            }
+        }
+
+        function renderCart() {
+            const body = document.querySelector('#cartTable tbody');
+            body.innerHTML = '';
+            let total = 0;
+            currentCart.forEach((line, index) => {
+                const rowTotal = line.price * line.quantity;
+                total += rowTotal;
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${line.name}</td><td>${line.quantity}</td><td>₹${line.price}</td><td>₹${rowTotal}</td>`;
+                body.appendChild(row);
+            });
+            if (currentCart.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="center-text">Add items to the bill list.</td></tr>';
+            }
+            document.getElementById('billTotal').textContent = `₹${total}`;
+        }
+
+        function renderSupport() {
+            const body = document.querySelector('#supportTable tbody');
+            body.innerHTML = '';
+            const userName = currentUser.displayName || currentUser.email;
+            const messages = db.supportMessages.filter(m => m.user === userName);
+            messages.forEach((message, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${message.user}</td><td>${message.text}</td><td>${new Date(message.date).toLocaleString()}</td>`;
+                body.appendChild(row);
+            });
+            if (messages.length === 0) {
+                body.innerHTML = '<tr><td colspan="4" class="center-text">No issues have been submitted.</td></tr>';
+            }
+        }
+
+        function renderBillHistory() {
+            const body = document.querySelector('#billHistoryTable tbody');
+            body.innerHTML = '';
+            const userName = currentUser.displayName || currentUser.email;
+            const bills = db.bills.filter(b => b.user === userName);
+            bills.forEach((bill) => {
+                const row = document.createElement('tr');
+                const itemNames = bill.items.map(item => `${item.name} (${item.quantity})`).join(', ');
+                row.innerHTML = `<td>${bill.billNo || String(bills.indexOf(bill) + 1).padStart(4, '0')}</td><td>${bill.customerName || '-'}</td><td>${bill.customerMobile || '-'}</td><td>${bill.user}</td><td>${itemNames}</td><td>₹${bill.total}</td><td>${new Date(bill.date).toLocaleDateString()}</td>`;
+                body.appendChild(row);
+            });
+            if (bills.length === 0) {
+                body.innerHTML = '<tr><td colspan="7" class="center-text">No bills have been generated yet.</td></tr>';
+            }
+        }
+
+        let allUsers = [];
+
+        async function loadAllUsers() {
+            try {
+                const snapshot = await database.ref('users').once('value');
+                const data = snapshot.val();
+                allUsers = [];
+                if (data) {
+                    Object.keys(data).forEach(uid => {
+                        const userData = data[uid];
+                        allUsers.push({
+                            uid,
+                            email: userData.email || '',
+                            role: userData.role || 'user',
+                            phone: userData.phone || ''
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function renderUserTable() {
+            const body = document.querySelector('#userTable tbody');
+            body.innerHTML = '';
+            allUsers.forEach((user, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${index + 1}</td><td>${user.email}</td><td>${capitalize(user.role)}</td><td>${user.phone || '-'}</td><td>-</td>`;
+                body.appendChild(row);
+            });
+            if (allUsers.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="center-text">No users found.</td></tr>';
+            }
+        }
+
+        function populateUserSelects() {
+            const selects = ['selectUserRole', 'selectUserPhone', 'selectUserRemove'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '<option value="">Select User</option>';
+                allUsers.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.uid;
+                    option.textContent = `${user.email} (${capitalize(user.role)})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function changeUserRole() {
+            const uid = document.getElementById('selectUserRole').value;
+            const newRole = document.getElementById('newRole').value;
+            if (!uid || !newRole) {
+                showMessage('roleMessage', 'Select a user and role.');
+                return;
+            }
+            database.ref(`users/${uid}/role`).set(newRole).then(() => {
+                const user = allUsers.find(u => u.uid === uid);
+                if (user) user.role = newRole;
+                renderUserTable();
+                populateUserSelects();
+                showMessage('roleMessage', 'Role updated.', '#15803d');
+            }).catch(error => {
+                console.error('Error updating role:', error);
+                showMessage('roleMessage', 'Error updating role.');
+            });
+        }
+
+        function addUserPhone() {
+            const uid = document.getElementById('selectUserPhone').value;
+            const phone = document.getElementById('userPhone').value.trim();
+            if (!uid || !phone) {
+                showMessage('phoneMessage', 'Select a user and enter phone.');
+                return;
+            }
+            database.ref(`users/${uid}/phone`).set(phone).then(() => {
+                const user = allUsers.find(u => u.uid === uid);
+                if (user) user.phone = phone;
+                renderUserTable();
+                populateUserSelects();
+                showMessage('phoneMessage', 'Phone added.', '#15803d');
+            }).catch(error => {
+                console.error('Error adding phone:', error);
+                showMessage('phoneMessage', 'Error adding phone.');
+            });
+        }
+
+        function removeUser() {
+            const uid = document.getElementById('selectUserRemove').value;
+            if (!uid) {
+                showMessage('removeMessage', 'Select a user.');
+                return;
+            }
+            if (!confirm('Are you sure you want to remove this user? This will delete their data.')) return;
+            database.ref(`users/${uid}`).remove().then(() => {
+                allUsers = allUsers.filter(u => u.uid !== uid);
+                renderUserTable();
+                populateUserSelects();
+                showMessage('removeMessage', 'User removed.', '#15803d');
+            }).catch(error => {
+                console.error('Error removing user:', error);
+                showMessage('removeMessage', 'Error removing user.');
+            });
+        }
+
+        function renderAll() {
+            renderInventory();
+            renderRequests();
+            renderMenu();
+            renderCart();
+            renderSupport();
+            renderBillHistory();
+            if (db.role === 'developer') {
+                loadAllUsers().then(() => {
+                    renderUserTable();
+                    populateUserSelects();
+                });
+            }
+        }
+
+        function showMessage(elementId, message, color = '#dc2626') {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            if (message) {
+                setTimeout(() => {
+                    if (el.textContent === message) el.textContent = '';
+                }, 4000);
+            }
+        }
+
+        function addStock() {
+            const nameInput = document.getElementById('stockName');
+            const qtyInput = document.getElementById('stockQuantity');
+            const name = nameInput.value.trim();
+            const quantity = parseInt(qtyInput.value, 10);
+            if (!name || !quantity || quantity < 1) {
+                showMessage('stockMessage', 'Enter a valid item name and quantity.');
+                return;
+            }
+            const existing = db.inventory.find(item => item.name.toLowerCase() === name.toLowerCase());
+            if (existing) {
+                existing.quantity += quantity;
+            } else {
+                db.inventory.push({ id: `inv_${Date.now()}`, name, quantity });
+            }
+            saveDB();
+            renderInventory();
+            nameInput.value = '';
+            qtyInput.value = '';
+            showMessage('stockMessage', 'Stock updated successfully.', '#15803d');
+        }
+
+        function submitStockRequest() {
+            const itemInput = document.getElementById('requestItem');
+            const qtyInput = document.getElementById('requestQty');
+            const item = itemInput.value.trim();
+            const quantity = parseInt(qtyInput.value, 10);
+            if (!item || !quantity || quantity < 1) {
+                showMessage('requestMessage', 'Enter a valid item and quantity.');
+                return;
+            }
+            const userName = currentUser.displayName || currentUser.email;
+            db.stockRequests.push({
+                id: `req_${Date.now()}`,
+                user: userName,
+                item,
+                quantity,
+                status: 'Pending',
+                date: new Date().toISOString()
+            });
+            saveDB();
+            renderRequests();
+            itemInput.value = '';
+            qtyInput.value = '';
+            showMessage('requestMessage', 'Your stock request was sent.', '#15803d');
+        }
+
+        function addToCart() {
+            const itemId = document.getElementById('selectItem').value;
+            const quantity = parseInt(document.getElementById('itemQty').value, 10);
+            if (!itemId || !quantity || quantity < 1) {
+                showMessage('billMessage', 'Choose an item and valid quantity.');
+                return;
+            }
+            const item = db.items.find(i => i.id === itemId);
+            if (!item) return;
+            const existing = currentCart.find(row => row.id === itemId);
+            if (existing) {
+                existing.quantity += quantity;
+            } else {
+                currentCart.push({ id: item.id, name: item.name, price: item.price, quantity });
+            }
+            renderCart();
+            showMessage('billMessage', 'Item added to bill.', '#15803d');
+        }
+
+        function clearBill() {
+            currentCart = [];
+            renderCart();
+            showMessage('billMessage', 'Bill cleared.');
+        }
+
+        async function getNextBillNumber() {
+            if (!database) {
+                return String(db.bills.length + 1).padStart(4, '0');
+            }
+            try {
+                const result = await database.ref('global/billCounter').transaction(current => {
+                    return (current || 0) + 1;
+                });
+                if (result && result.committed) {
+                    return String(result.snapshot.val()).padStart(4, '0');
+                }
+            } catch (error) {
+                console.error('Error updating bill counter:', error);
+            }
+            return String(db.bills.length + 1).padStart(4, '0');
+        }
+
+        async function saveBillRecord(billDetails) {
+            db.bills.push(billDetails);
+            await saveDB();
+        }
+
+        async function generatePdfBill() {
+            if (currentCart.length === 0) {
+                showMessage('billMessage', 'Add items before printing.');
+                return;
+            }
+            const date = new Date();
+            const dateStr = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+            const totalAmount = currentCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const userName = currentUser.displayName || currentUser.email;
+            const paymentMode = document.getElementById('paymentMode').value || 'Cash';
+            const customerName = document.getElementById('customerName').value.trim() || 'Walk-in Customer';
+            const customerMobile = document.getElementById('customerMobile').value.trim();
+            const billNo = await getNextBillNumber();
+            const billData = {
+                id: `bill_${Date.now()}`,
+                billNo,
+                user: userName,
+                customerName,
+                customerMobile,
+                date: date.toISOString(),
+                items: currentCart.map(item => ({ name: item.name, quantity: item.quantity, price: item.price })),
+                total: totalAmount,
+                paymentMode
+            };
+            saveBillRecord(billData);
+            const jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
+            if (jsPDF) {
+                const doc = new jsPDF({ unit: 'pt' });
+                
+                // Try to load logo
+                loadLogoForPdf();
+                const logoToUse = await loadLogoAsync();
+                
+                // Add logo if available - positioned in the middle top
+                if (logoToUse) {
+                    try {
+                        doc.addImage(logoToUse, 'PNG', 180, 8, 130, 35);
+                    } catch (err) {
+                        console.log('Could not add logo to PDF:', err);
+                    }
+                }
+                finalizePdfBill(doc, billNo, dateStr, customerName, customerMobile, userName, paymentMode, totalAmount, billData);
+            } else {
+                window.print();
+                if (customerMobile) {
+                    if (!sendWhatsAppBill(billData)) {
+                        showMessage('billMessage', 'Bill printed, but WhatsApp number looks invalid.', '#b91c1c');
+                    }
+                }
+            }
+        }
+        
+        function finalizePdfBill(doc, billNo, dateStr, customerName, customerMobile, userName, paymentMode, totalAmount, billData) {
+            doc.setFont('courier', 'normal');
+            doc.setFontSize(16);
+            doc.text('GOVIND FOOD TRUCK', 40, 60);
+            doc.setFontSize(9);
+            doc.text(`Bill No: ${billNo}`, 40, 80);
+            doc.text(`Date: ${dateStr}`, 260, 80);
+            doc.text(`Customer: ${customerName}`, 40, 96);
+            doc.text(`Mobile: ${customerMobile || 'N/A'}`, 40, 112);
+            doc.text(`Cashier: ${userName}`, 260, 96);
+            doc.text(`Payment Mode: ${paymentMode}`, 260, 112);
+            doc.setLineWidth(0.5);
+            doc.line(40, 130, 540, 130);
+            doc.setFontSize(10);
+            doc.text('Item', 40, 150);
+            doc.text('Qty', 260, 150);
+            doc.text('Rate', 340, 150);
+            doc.text('Amount', 440, 150);
+            doc.line(40, 156, 540, 156);
+            let y = 174;
+            currentCart.forEach((line) => {
+                doc.text(line.name, 40, y);
+                doc.text(String(line.quantity), 260, y);
+                doc.text(line.price.toFixed(2), 340, y);
+                doc.text((line.price * line.quantity).toFixed(2), 440, y);
+                y += 18;
+            });
+            y += 8;
+            doc.line(40, y, 540, y);
+            y += 18;
+            const gst = +(totalAmount * 0.05).toFixed(2);
+            doc.text(`Subtotal`, 340, y);
+            doc.text(totalAmount.toFixed(2), 440, y);
+            y += 18;
+            doc.text(`GST @ 5%`, 340, y);
+            doc.text(gst.toFixed(2), 440, y);
+            y += 18;
+            doc.setFontSize(12);
+            doc.text(`TOTAL`, 340, y);
+            doc.text((totalAmount + gst).toFixed(2), 440, y);
+            y += 28;
+            doc.setFontSize(10);
+            doc.text('Thanks for Visiting Govind Food Truck!', 40, y);
+            doc.text('@govind_food_truck', 40, y + 18);
+            doc.save(`Govind_Bill_${Date.now()}.pdf`);
+            
+            if (billData.customerMobile) {
+                if (!sendWhatsAppBill(billData)) {
+                    showMessage('billMessage', 'Bill printed, but WhatsApp number looks invalid.', '#b91c1c');
+                }
+            }
+            currentCart = [];
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerMobile').value = '';
+            renderCart();
+            renderBillHistory();
+            showMessage('billMessage', 'Bill printed and saved for admin.', '#15803d');
+        }
+
+        function sendWhatsAppBill(bill) {
+            const phone = bill.customerMobile.replace(/\D/g, '');
+            if (!phone || phone.length < 8) {
+                return false;
+            }
+            const itemsText = bill.items.map((item, index) => `${index + 1}. ${item.name}  Qty: ${item.quantity}  Rate: ₹${item.price.toFixed(2)}  Amount: ₹${(item.price * item.quantity).toFixed(2)}`).join('\n');
+            const message = `GOVIND FOOD TRUCK\nDLF street food court\nTelangana\n\nBill To: ${bill.customerName}\nMobile: ${bill.customerMobile}\nRef No: ${bill.billNo}\nDate of Issue: ${new Date(bill.date).toLocaleDateString()}\n\nSR  Name  Qty  Rate  Amount\n${itemsText}\n\nTotal Amount: ₹${bill.total.toFixed(2)}\nPayment Mode: ${bill.paymentMode}\n\nThank you for doing business with us.\nGOVIND FOOD TRUCK`;
+            const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+            return true;
+        }
+
+        function addMenuItem() {
+            const nameInput = document.getElementById('menuItemName');
+            const priceInput = document.getElementById('menuItemPrice');
+            const name = nameInput.value.trim();
+            const price = parseFloat(priceInput.value);
+            if (!name || !price || price <= 0) {
+                showMessage('billMessage', 'Enter valid menu item name and price.');
+                return;
+            }
+            db.items.push({ id: `item_${Date.now()}`, name, price });
+            saveDB();
+            nameInput.value = '';
+            priceInput.value = '';
+            renderMenu();
+            showMessage('billMessage', 'Menu item added successfully.', '#15803d');
+        }
+
+        function editMenuItem() {
+            const itemId = document.getElementById('selectItem').value;
+            if (!itemId) {
+                showMessage('billMessage', 'Select an item from the menu to edit.');
+                return;
+            }
+            const item = db.items.find(i => i.id === itemId);
+            if (!item) return;
+            document.getElementById('menuItemName').value = item.name;
+            document.getElementById('menuItemPrice').value = item.price;
+            editingMenuItem = item;
+            showMessage('billMessage', 'Edit the prices and click Update selected item.', '#15803d');
+        }
+
+        function saveMenuEdit() {
+            if (!editingMenuItem) {
+                showMessage('billMessage', 'Select an item first using the menu selector.');
+                return;
+            }
+            const nameInput = document.getElementById('menuItemName');
+            const priceInput = document.getElementById('menuItemPrice');
+            const name = nameInput.value.trim();
+            const price = parseFloat(priceInput.value);
+            if (!name || !price || price <= 0) {
+                showMessage('billMessage', 'Provide a valid name and price.');
+                return;
+            }
+            const editingItemId = editingMenuItem.id;
+            editingMenuItem.name = name;
+            editingMenuItem.price = price;
+            currentCart = currentCart.map(line => line.id === editingItemId ? { ...line, name, price } : line);
+            saveDB();
+            renderMenu();
+            renderCart();
+            nameInput.value = '';
+            priceInput.value = '';
+            editingMenuItem = null;
+            showMessage('billMessage', 'Menu item updated successfully.', '#15803d');
+        }
+
+        function deleteMenuItem() {
+            const itemId = document.getElementById('selectItem').value;
+            if (!itemId) {
+                showMessage('billMessage', 'Select an item from the menu to delete.');
+                return;
+            }
+            const itemIndex = db.items.findIndex(i => i.id === itemId);
+            if (itemIndex < 0) return;
+            const itemName = db.items[itemIndex].name;
+            if (!confirm(`Delete "${itemName}" from menu?`)) {
+                return;
+            }
+            db.items.splice(itemIndex, 1);
+            currentCart = currentCart.filter(line => line.id !== itemId);
+            if (editingMenuItem && editingMenuItem.id === itemId) {
+                editingMenuItem = null;
+                document.getElementById('menuItemName').value = '';
+                document.getElementById('menuItemPrice').value = '';
+            }
+            saveDB();
+            renderMenu();
+            renderCart();
+            showMessage('billMessage', `${itemName} removed from menu.`, '#15803d');
+        }
+
+        function sendSupportIssue() {
+            const messageInput = document.getElementById('supportMessageInput');
+            const text = messageInput.value.trim();
+            if (!text) {
+                showMessage('supportMessage', 'Describe your issue before sending.');
+                return;
+            }
+            const userName = currentUser.displayName || currentUser.email;
+            db.supportMessages.push({ id: `sup_${Date.now()}`, user: userName, text, date: new Date().toISOString() });
+            saveDB();
+            messageInput.value = '';
+            renderSupport();
+            showMessage('supportMessage', 'Your issue was sent to admin.', '#15803d');
+        }
+
+        function attemptLogin() {
+            const email = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPasskey').value.trim();
+            if (!email || !password) {
+                showMessage('loginMessage', 'Enter your email and password.');
+                return;
+            }
+            if (!firebaseInitialized) {
+                showMessage('loginMessage', 'Firebase is still loading. Please wait...');
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password)
+                .then(async (userCredential) => {
+                    console.log("User logged in:", userCredential.user);
+                    db = await loadUserData(userCredential.user.uid);
+                    setUser(userCredential.user);
+                })
+                .catch((error) => {
+                    console.error("Login error:", error.message);
+                    showMessage('loginMessage', 'Invalid email or password.');
+                });
+        }
+
+        async function sendPhoneOtp() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            if (!phone) {
+                showMessage('loginMessage', 'Enter your phone number in international format (e.g., +919876543210).');
+                return;
+            }
+            if (!firebaseInitialized) {
+                showMessage('loginMessage', 'Firebase is still loading. Please wait...');
+                return;
+            }
+            try {
+                // Reset previous OTP and reCAPTCHA if retrying
+                document.getElementById('loginOtp').value = '';
+                if (window.recaptchaVerifier) {
+                    window.recaptchaVerifier.clear();
+                    window.recaptchaVerifier = null;
+                }
+                
+                showMessage('loginMessage', 'Sending OTP, please wait...', '#60a5fa');
+                
+                // Initialize new reCAPTCHA verifier with better error handling
+                window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                    size: 'normal',
+                    callback: (response) => {
+                        console.log('reCAPTCHA verified:', response);
+                    },
+                    'expired-callback': () => {
+                        console.log('reCAPTCHA expired');
+                        showMessage('loginMessage', 'reCAPTCHA expired. Please try again.');
+                    },
+                    'error-callback': (error) => {
+                        console.error('reCAPTCHA error:', error);
+                        showMessage('loginMessage', 'reCAPTCHA error. Please refresh and try again.');
+                    }
+                }, auth);
+                
+                const appVerifier = window.recaptchaVerifier;
+                console.log('Attempting to send OTP to:', phone);
+                phoneConfirmationResult = await auth.signInWithPhoneNumber(phone, appVerifier);
+                document.getElementById('otpSection').classList.remove('hidden');
+                showMessage('loginMessage', 'OTP sent to your phone. Check your SMS.', '#15803d');
+            } catch (error) {
+                console.error('Phone OTP error - Full details:', {
+                    code: error.code,
+                    message: error.message,
+                    error: error
+                });
+                
+                // Clear recaptcha on error so user can retry
+                if (window.recaptchaVerifier) {
+                    window.recaptchaVerifier.clear();
+                    window.recaptchaVerifier = null;
+                }
+                
+                // Show appropriate error message with more details
+                let errorMsg = 'Unable to send OTP. ';
+                if (error.code === 'auth/invalid-phone-number') {
+                    errorMsg += 'Invalid phone number format. Use +919876543210 format.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMsg += 'Too many requests. Try again in 1 hour.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    errorMsg += 'Phone auth not enabled. Contact admin.';
+                } else if (error.code === 'auth/invalid-api-key') {
+                    errorMsg += 'Firebase config error. Contact admin.';
+                } else if (error.message && error.message.includes('reCAPTCHA')) {
+                    errorMsg += 'reCAPTCHA error. Refresh the page and try again.';
+                } else {
+                    errorMsg += error.message || 'Check the phone number and try again.';
+                }
+                showMessage('loginMessage', errorMsg);
+            }
+        }
+
+        async function verifyPhoneOtp() {
+            const otp = document.getElementById('loginOtp').value.trim();
+            if (!otp) {
+                showMessage('loginMessage', 'Enter the OTP received on your phone.');
+                return;
+            }
+            if (!phoneConfirmationResult) {
+                showMessage('loginMessage', 'Please request OTP first.');
+                return;
+            }
+            try {
+                const userCredential = await phoneConfirmationResult.confirm(otp);
+                const user = userCredential.user;
+                const phone = user.phoneNumber;
+                
+                // Check if user data exists in database
+                let userExists = false;
+                try {
+                    const snapshot = await database.ref(`users/${user.uid}`).once('value');
+                    userExists = snapshot.exists();
+                } catch (e) {
+                    console.error('Error checking user:', e);
+                }
+                
+                // If user doesn't exist in database, create their profile
+                if (!userExists) {
+                    const newUserData = {
+                        ...getDefaultDB(),
+                        email: user.email || phone,
+                        phone: phone,
+                        name: "User",
+                        role: 'user'
+                    };
+                    await database.ref(`users/${user.uid}`).set(newUserData);
+                    db = newUserData;
+                } else {
+                    // User exists, load their data and update phone if needed
+                    db = await loadUserData(user.uid);
+                    
+                    // Ensure phone is saved in database
+                    if (!db.phone || db.phone !== phone) {
+                        await database.ref(`users/${user.uid}/phone`).set(phone);
+                        db.phone = phone;
+                    }
+                }
+                
+                setUser(user);
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showMessage('loginMessage', 'Invalid OTP. Please try again.');
+            }
+        }
+
+        function showLoginMethod(method) {
+            const emailSection = document.getElementById('emailLoginFields');
+            const phoneSection = document.getElementById('phoneLoginFields');
+            const emailButton = document.getElementById('emailLoginMode');
+            const phoneButton = document.getElementById('phoneLoginMode');
+            
+            // Clear phone login state when switching methods
+            phoneConfirmationResult = null;
+            document.getElementById('loginPhone').value = '';
+            document.getElementById('loginOtp').value = '';
+            document.getElementById('otpSection').classList.add('hidden');
+            showMessage('loginMessage', '');
+            
+            // Clear recaptcha if switching away from phone login
+            if (method !== 'phone' && window.recaptchaVerifier) {
+                window.recaptchaVerifier.clear();
+                window.recaptchaVerifier = null;
+            }
+            
+            if (method === 'phone') {
+                emailSection.classList.add('hidden');
+                phoneSection.classList.remove('hidden');
+                emailButton.classList.remove('active');
+                phoneButton.classList.add('active');
+            } else {
+                emailSection.classList.remove('hidden');
+                phoneSection.classList.add('hidden');
+                document.getElementById('otpSection').classList.add('hidden');
+                emailButton.classList.add('active');
+                phoneButton.classList.remove('active');
+            }
+        }
+
+        function attemptRegister() {
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            if (!name || !email || !password) {
+                showMessage('registerMessage', 'Fill all fields before registering.');
+                return;
+            }
+            if (!firebaseInitialized) {
+                showMessage('registerMessage', 'Firebase is still loading. Please wait...');
+                return;
+            }
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    // Set display name
+                    await user.updateProfile({ displayName: name });
+                    // Initialize user data in database
+                    db = getDefaultDB();
+                    await firebase.database().ref(`users/${user.uid}`).set({
+                        ...db,
+                        email: user.email,
+                        name: name,
+                        role: 'user'
+                    });
+                    document.getElementById('registerName').value = '';
+                    document.getElementById('registerEmail').value = '';
+                    document.getElementById('registerPassword').value = '';
+                    showMessage('registerMessage', 'Registered successfully. Use login tab now.', '#15803d');
+                    setUser(null);
+                })
+                .catch((error) => {
+                    console.error("Registration error:", error.message);
+                    showMessage('registerMessage', 'Email already in use or error: ' + error.message);
+                });
+        }
+
+        function upgradeRole() {
+            const password = prompt('Enter role password:');
+            if (!password) return;
+            let newRole = null;
+            if (password === 'Ram') {
+                newRole = 'admin';
+            } else if (password === 'Shree Ram') {
+                newRole = 'user';
+            } else if (password === 'VIBGYOR') {
+                newRole = 'developer';
+            } else {
+                alert('Incorrect role password.');
+                return;
+            }
+            if (currentUser && newRole) {
+                database.ref(`users/${currentUser.uid}/role`).set(newRole).then(() => {
+                    db.role = newRole;
+                    updateRoleUI();
+                    renderAll();
+                    alert(`Your role is now ${newRole}.`);
+                }).catch((error) => {
+                    console.error("Error updating role:", error);
+                });
+            }
+        }
+
+        function bindClick(id, handler) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', handler);
+            }
+        }
+
+        bindClick('emailLoginMode', () => showLoginMethod('email'));
+        bindClick('phoneLoginMode', () => showLoginMethod('phone'));
+        bindClick('loginButton', attemptLogin);
+        bindClick('sendPhoneOtpButton', sendPhoneOtp);
+        bindClick('verifyPhoneOtpButton', verifyPhoneOtp);
+        bindClick('addStockButton', addStock);
+        bindClick('submitRequestButton', submitStockRequest);
+        bindClick('addToCartButton', addToCart);
+        bindClick('clearBillButton', clearBill);
+        bindClick('printBillButton', generatePdfBill);
+        bindClick('sendSupportButton', sendSupportIssue);
+        bindClick('upgradeButton', upgradeRole);
+        bindClick('logoutButton', () => {
+            firebase.auth().signOut().then(() => {
+                setUser(null);
+                document.getElementById('loginName').value = '';
+                document.getElementById('loginPasskey').value = '';
+                console.log("User logged out");
+            }).catch((error) => {
+                console.error("Logout error:", error);
+            });
+        });
+        bindClick('addMenuItemButton', addMenuItem);
+        bindClick('editMenuItemButton', editMenuItem);
+        bindClick('saveMenuEditButton', saveMenuEdit);
+        bindClick('deleteMenuItemButton', deleteMenuItem);
+        bindClick('changeRoleButton', changeUserRole);
+        bindClick('addPhoneButton', addUserPhone);
+        bindClick('removeUserButton', removeUser);
+
+        const selectItemElement = document.getElementById('selectItem');
+        if (selectItemElement) {
+            selectItemElement.addEventListener('dblclick', editMenuItem);
+        }
+
+        document.querySelectorAll('.nav-item').forEach(button => {
+            button.addEventListener('click', () => showSection(button.dataset.section));
+        });
+
+        // Add Enter key support for login form
+        document.getElementById('loginName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') attemptLogin();
+        });
+        document.getElementById('loginPasskey').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') attemptLogin();
+        });
+        document.getElementById('loginPhone').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendPhoneOtp();
+        });
+        document.getElementById('loginOtp').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyPhoneOtp();
+        });
+    </script>
+</body>
+</html>
