@@ -1450,11 +1450,7 @@
                 document.getElementById('otpSection').classList.remove('hidden');
                 showMessage('loginMessage', 'OTP sent to your phone. Check your SMS.', '#15803d');
             } catch (error) {
-                console.error('Phone OTP error - Full details:', {
-                    code: error.code,
-                    message: error.message,
-                    error: error
-                });
+                console.error('Phone OTP error code:', error.code, 'message:', error.message, 'error object:', error);
                 
                 // Clear recaptcha on error so user can retry
                 if (window.recaptchaVerifier) {
@@ -1469,9 +1465,11 @@
                 } else if (error.code === 'auth/too-many-requests') {
                     errorMsg += 'Too many requests. Try again in 1 hour.';
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMsg += 'Phone auth not enabled. Contact admin.';
+                    errorMsg += 'Phone auth not enabled in Firebase.';
                 } else if (error.code === 'auth/invalid-api-key') {
-                    errorMsg += 'Firebase config error. Contact admin.';
+                    errorMsg += 'Firebase API key is invalid. Check your Firebase config.';
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    errorMsg += 'This domain is not authorized in Firebase Auth settings.';
                 } else if (error.message && error.message.includes('reCAPTCHA')) {
                     errorMsg += 'reCAPTCHA error. Refresh the page and try again.';
                 } else {
